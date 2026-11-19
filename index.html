@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Checador de Asistencia</title>
+<title>CHECADOR DE TIEMPO EXTRA</title>
 <script src="https://unpkg.com/html5-qrcode"></script>
 <style>
 body{font-family:Arial;background:#eef2f7;margin:0;padding:15px;color:#172033}
@@ -58,7 +58,23 @@ small{color:#586579}
 <tbody id="listaAsistencia"></tbody>
 </table>
 </div>
-<button onclick="exportar()">DESCARGAR REPORTE CSV</button>
+<button onclick="exportar()">DESCARGAR LISTA DE TIEMPO EXTRA</button>
+ <button onclick="abrirHistorial()">LISTAS ANTERIORES</button>
+
+<div id="historial" style="display:none;margin-top:15px">
+<h3>Consultar asistencia por fecha</h3>
+<input type="date" id="fechaHistorial">
+<button onclick="buscarHistorial()">BUSCAR FECHA</button>
+<p id="totalHistorial"></p>
+<div style="overflow-x:auto">
+<table>
+<thead>
+<tr><th>Número</th><th>Operador</th><th>Hora</th></tr>
+</thead>
+<tbody id="resultadosHistorial"></tbody>
+</table>
+</div>
+</div>
 </section>
 </main>
  <button class="rojo" onclick="nuevaLista()">NUEVA LISTA (BORRAR HOY)</button>
