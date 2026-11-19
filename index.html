@@ -164,7 +164,14 @@ async function detenerCamara(){
   catch(e){}
  }
 }
-
+function nuevaLista(){
+ if(!confirm("¿Deseas borrar las asistencias de HOY? Los días anteriores se conservarán."))return;
+ const hoy=fechaHoy();
+ asistencias=asistencias.filter(a=>a.fecha!==hoy);
+ guardar();
+ mostrar();
+ document.getElementById("mensaje").textContent="Nueva lista iniciada correctamente.";
+}
 function exportar(){
  const filas=[["Número","Nombre","Fecha","Hora"]];
  asistencias.forEach(a=>filas.push([a.numero,a.nombre,a.fecha,a.hora]));
