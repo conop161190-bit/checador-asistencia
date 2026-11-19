@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checador de Asistencia</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<style>
+body{font-family:Arial;background:#eef2f7;margin:0;padding:15px;color:#172033}
+main{max-width:650px;margin:auto}
+h1{text-align:center;color:#123b68}
+section{background:white;padding:16px;margin:14px 0;border-radius:12px;box-shadow:0 2px 8px #0001}
+input,button{box-sizing:border-box;width:100%;padding:13px;margin:6px 0;border-radius:8px;font-size:16px}
+input{border:1px solid #bbb}
+button{border:0;background:#1769aa;color:white;font-weight:bold}
+button:active{opacity:.8}
+.verde{background:#16834b}
+.rojo{background:#b52b35}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{padding:9px;border-bottom:1px solid #ddd;text-align:left}
+small{color:#586579}
+#mensaje{font-weight:bold;text-align:center;padding:10px}
+</style>
+</head>
+<body>
+<main>
+<h1>CHECADOR DE ASISTENCIA</h1>
+
+<section>
+<h3>Registrar operador</h3>
+<input id="numero" placeholder="Número de operador">
+<input id="nombre" placeholder="Nombre completo">
+<button class="verde" onclick="agregarOperador()">Guardar operador</button>
+<h3>Operadores registrados</h3>
+<div id="listaOperadores"></div>
+</section>
+
+<section>
+<h3>Registrar asistencia</h3>
+<p>Escanea el código de barras del operador.</p>
+<div id="lector"></div>
+<button onclick="iniciarCamara()">ENCENDER CÁMARA</button>
+<button class="rojo" onclick="detenerCamara()">APAGAR CÁMARA</button>
+<hr>
+<p>También puedes escribir el número manualmente:</p>
+<input id="codigo" placeholder="Número de operador">
+<button onclick="registrar(document.getElementById('codigo').value)">REGISTRAR ASISTENCIA</button>
+<div id="mensaje"></div>
+</section>
+
+<section>
+<h3>Asistencias de hoy</h3>
+<p id="fecha"></p>
+<div id="total"></div>
+<div style="overflow-x:auto">
+<table>
+<thead><tr><th>Número</th><th>Operador</th><th>Hora</th></tr></thead>
+<tbody id="listaAsistencia"></tbody>
+</table>
+</div>
+<button onclick="exportar()">DESCARGAR REPORTE CSV</button>
+</section>
+</main>
+
+<script>
+let operadores=JSON.parse(localStorage.getItem("operadores")||"[]");
+let asistencias=JSON.parse(localStorage.getItem("asistencias")||"[]");
+let lector=null;
+let ultimoCodigo="";
+let ultimoTiempo=0;
+
+function guardar(){
+ localStorage.setItem("operadores",JSON.stringify(operadores));
+ localStorage.setItem("asistencias",JSON.stringify(asistencias));
+}
+
+function fechaHoy(){
+ const d=new Date();
+ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+
+function agregarOperador(){
+ const n=document.getElementById("numero").value.trim();
+ const nombre=document.getElementById("nombre").value.trim();
+ if(!n||!nombre){alert("Escribe el número y el nombre.");return;}
+ if(operadores.some(o=>o.numero===n)){alert("Ese número ya está registrado.");return;}
+ operadores.push({numero:n,nombre:nombre});
+ guardar();
+ document.getElementById("numero").value="";
+ document.getElementById("nombre").value="";
+ mostrar();
+ alert("Operador guardado correctamente.");
+}
+
+function registrar(codigo){
+ codigo=String(codigo||"").trim();
+ if(!codigo)return;
+ const operador=operadores.find(o=>o.numero===codigo);
+ if(!operador){
+  document.getElementById("mensaje").textContent="⚠️ Operador no registrado: "+codigo;
+  return;
+ }
+ const hoy=fechaHoy();
+ if(asistencias.some(a=>a.numero===codigo&&a.fecha===hoy)){
+  document.getElementById("mensaje").textContent="⚠️ "+operador.nombre+" ya registró asistencia hoy.";
+  return;
+ }
+ const ahora=new Date();
+ asistencias.push({
+  numero:codigo,
+  nombre:operador.nombre,
+  fecha:hoy,
+  hora:ahora.toLocaleTimeString("es-MX")
+ });
+ guardar();
+ document.getElementById("codigo").value="";
+ document.getElementById("mensaje").textContent="✅ Asistencia registrada: "+operador.nombre;
+ mostrar();
+}
+
+function mostrar(){
+ const hoy=fechaHoy();
+ document.getElementById("fecha").textContent="Fecha: "+new Date().toLocaleDateString("es-MX");
+ const registros=asistencias.filter(a=>a.fecha===hoy);
+ document.getElementById("total").textContent="Total de asistencias: "+registros.length;
+ document.getElementById("listaAsistencia").innerHTML="";
+ registros.forEach(a=>{
+  const fila=document.createElement("tr");
+  [a.numero,a.nombre,a.hora].forEach(v=>{
+   const celda=document.createElement("td");
+   celda.textContent=v;
+   fila.appendChild(celda);
+  });
+  document.getElementById("listaAsistencia").appendChild(fila);
+ });
+ document.getElementById("listaOperadores").textContent=
+  operadores.length+" operadores registrados";
+}
+
+async function iniciarCamara(){
+ if(!window.Html5Qrcode){alert("No se pudo cargar el lector. Revisa tu conexión a internet.");return;}
+ try{
+  if(!lector)lector=new Html5Qrcode("lector");
+  await lector.start(
+   {facingMode:"environment"},
+   {fps:10,qrbox:{width:250,height:150}},
+   texto=>{
+    const ahora=Date.now();
+    if(texto===ultimoCodigo&&ahora-ultimoTiempo<2500)return;
+    ultimoCodigo=texto;
+    ultimoTiempo=ahora;
+    registrar(texto);
+   },
+   ()=>{}
+  );
+ }catch(e){
+  alert("No se pudo encender la cámara. Revisa el permiso de cámara del navegador.");
+ }
+}
+
+async function detenerCamara(){
+ if(lector){
+  try{await lector.stop();document.getElementById("lector").innerHTML="Cámara apagada.";}
+  catch(e){}
+ }
+}
+
+function exportar(){
+ const filas=[["Número","Nombre","Fecha","Hora"]];
+ asistencias.forEach(a=>filas.push([a.numero,a.nombre,a.fecha,a.hora]));
+ const csv=filas.map(f=>f.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\n");
+ const archivo=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+ const enlace=document.createElement("a");
+ enlace.href=URL.createObjectURL(archivo);
+ enlace.download="reporte_asistencia.csv";
+ enlace.click();
+ URL.revokeObjectURL(enlace.href);
+}
+
+mostrar();
+</script>
+</body>
+</html>
