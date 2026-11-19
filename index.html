@@ -188,6 +188,36 @@ function nuevaLista(){
  mostrar();
  document.getElementById("mensaje").textContent="Nueva lista iniciada correctamente.";
 }
+ function abrirHistorial(){
+ const panel=document.getElementById("historial");
+ panel.style.display=panel.style.display==="none"?"block":"none";
+}
+
+function buscarHistorial(){
+ const fecha=document.getElementById("fechaHistorial").value;
+ const tabla=document.getElementById("resultadosHistorial");
+ tabla.innerHTML="";
+
+ if(!fecha){
+  alert("Selecciona una fecha.");
+  return;
+ }
+
+ const registros=asistencias.filter(a=>a.fecha===fecha);
+
+ registros.forEach(a=>{
+  const fila=document.createElement("tr");
+  [a.numero,a.nombre,a.hora].forEach(v=>{
+   const celda=document.createElement("td");
+   celda.textContent=v;
+   fila.appendChild(celda);
+  });
+  tabla.appendChild(fila);
+ });
+
+ document.getElementById("totalHistorial").textContent=
+ "Asistencias encontradas: "+registros.length;
+}
 function exportar(){
  const filas=[["Número","Nombre","Fecha","Hora"]];
  asistencias.forEach(a=>filas.push([a.numero,a.nombre,a.fecha,a.hora]));
